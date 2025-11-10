@@ -1,0 +1,746 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ORPP Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="data:,">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(180deg, #f5f7fa 0%, #e4e9f0 100%); color: #212529; }
+    .header { background-color: #1A56DB; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; position: relative; }
+    .container { max-width: 1400px; margin: 20px auto; }
+    .btn-primary { background-color: #1A56DB; border-color: #1A56DB; }
+    .btn-primary:hover { background-color: #0d3a9c; }
+    .card { box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 10px; }
+    .kpi-tile { background: #fff; padding: 15px; text-align: center; border-radius: 8px; }
+    .chart-container { max-width: 600px; margin: 20px auto; }
+    #reportOutput { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-top: 20px; }
+    .spinner-border { margin: 10px auto; display: block; }
+    .modal-label { font-weight: bold; color: #1A56DB; margin-bottom: 0.25rem; }
+    .modal-value { color: #333; }
+    .section-divider { border-top: 1px solid #dee2e6; margin: 1.5rem 0; padding-top: 1rem; }
+    .audit-history { max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    .audit-entry { margin-bottom: 0.5rem; }
+    .header img { height: 70px; margin: 0 20px; }
+    .logo-left { position: absolute; left: 20px; top: 12px; }
+    .logo-right { position: absolute; right: 20px; top: 12px; }
+    .admin-profile { position: absolute; right: 20px; top: 80px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; }
+    .status-pending { background-color: #fff3cd; color: #856404; }
+    .status-served { background-color: #d4edda; color: #155724; }
+    .status-escalated { background-color: #f8d7da; color: #721c24; }
+    .rating-poor { color: #dc3545; font-weight: bold; }
+    .rating-fair { color: #fd7e14; font-weight: bold; }
+    .rating-good { color: #20c997; font-weight: bold; }
+    .rating-excellent { color: #198754; font-weight: bold; }
+    .table th { background-color: #1A56DB; color: white; }
+    .analytics-section { display: none; }
+    .escalation-info { background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 10px 0; }
+    @media (max-width: 768px) {
+      .kpi-tile { font-size: 0.9rem; }
+      .chart-container { max-width: 100%; }
+      .header img { height: 50px; }
+      .admin-profile { position: static; margin: 10px auto; display: inline-block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="assets/coat-of-arms.png" alt="Kenya Coat of Arms" class="logo-left" />
+    <img src="assets/orpp-logo.png" alt="ORPP Logo" class="logo-right" />
+    <h1>Office of the Registrar of Political Parties (ORPP)</h1>
+    <p>Admin Dashboard</p>
+    <div id="adminProfile" class="admin-profile d-none">Logged in as <span id="adminEmail"></span></div>
+  </div>
+
+  <div class="container">
+    <!-- AUTH -->
+    <div id="authSection">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Login</h5>
+          <form id="loginForm" class="needs-validation" novalidate>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" required>
+              <div class="invalid-feedback">Enter valid email.</div>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+              <div class="invalid-feedback">Enter password.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="d-none">
+      <button id="logoutBtn" class="btn btn-secondary mb-3">Logout</button>
+      <button id="analyticsBtn" class="btn btn-info mb-3 ms-2">Show Analytics</button>
+
+      <!-- Customer Entries Table - Moved to TOP -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5>Customer Entries</h5>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" id="search" placeholder="Search by name/ID/ticket">
+            <select class="form-select" id="filter">
+              <option value="All">All</option>
+              <option value="Today">Today</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <div id="loading" class="text-center d-none"><div class="spinner-border"></div></div>
+          <div class="table-responsive">
+            <table class="table table-hover table-striped">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Ticket No.</th>
+                  <th>Date</th>
+                  <th>Time in</th>
+                  <th>Time out</th>
+                  <th>Name</th>
+                  <th>Location</th>
+                  <th>Department</th>
+                  <th>Person to see</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="entriesTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Section (Hidden by default) -->
+      <div id="analyticsSection" class="analytics-section">
+        <!-- KPIs -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Key Metrics</h5>
+            <div class="row g-3">
+              <div class="col-md-3"><div class="kpi-tile"><strong>Total</strong><p id="kpiTotal">0</p></div></div>
+              <div class="col-md-3"><div class="kpi-tile"><strong>Pending</strong><p id="kpiPending">0</p></div></div>
+              <div class="col-md-3"><div class="kpi-tile"><strong>Served Today</strong><p id="kpiServedToday">0</p></div></div>
+              <div class="col-md-3"><div class="kpi-tile"><strong>Avg Wait</strong><p id="kpiAvgWait">0 min</p></div></div>
+              <div class="col-md-4"><div class="kpi-tile"><strong>% Excellent Rating</strong><p id="kpiExcellent">0%</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row">
+          <div class="col-md-6"><div class="chart-container"><canvas id="dailyTrendChart"></canvas></div></div>
+          <div class="col-md-6"><div class="chart-container"><canvas id="locationChart"></canvas></div></div>
+        </div>
+
+        <!-- Top Reasons -->
+        <div class="card mt-4">
+          <div class="card-body">
+            <h6>Top 5 Reasons</h6>
+            <table class="table table-sm"><tbody id="reasonsTable"></tbody></table>
+          </div>
+        </div>
+
+        <!-- Report -->
+        <div class="card mt-4">
+          <div class="card-body">
+            <h5>Generate Report</h5>
+            <div class="row g-3">
+              <div class="col-md-4"><input type="date" class="form-control" id="startDate" required></div>
+              <div class="col-md-4"><input type="date" class="form-control" id="endDate" required></div>
+              <div class="col-md-4">
+                <select class="form-select" id="reportFormat">
+                  <option value="csv">CSV</option>
+                  <option value="pdf">PDF</option>
+                </select>
+              </div>
+              <div class="col-12"><button id="generateReportBtn" class="btn btn-primary w-100">Download</button></div>
+            </div>
+            <div id="reportOutput" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL -->
+      <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Customer Entry Details</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <form id="editForm" class="needs-validation" novalidate>
+                <input type="hidden" id="editId">
+
+                <!-- Customer Information Section -->
+                <h6 class="section-divider">Customer Information</h6>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="modal-label">Ticket No.</label>
+                    <p id="editTicketNo" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="modal-label">Date</label>
+                    <p id="editVisitDate" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="modal-label">Time In</label>
+                    <p id="editTimeIn" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="modal-label">Time Out</label>
+                    <input type="time" class="form-control" id="editTimeOut">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">Full Name</label>
+                    <p id="editName" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">ID No / Passport</label>
+                    <p id="editIdNo" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">Phone Number</label>
+                    <p id="editPhoneNumber" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">Location</label>
+                    <p id="editLocation" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">Department</label>
+                    <input type="text" class="form-control" id="editDepartment" maxlength="50" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="modal-label">Person to See</label>
+                    <p id="editPersonToSee" class="form-control-plaintext modal-value"></p>
+                  </div>
+                  <div class="col-12">
+                    <label class="modal-label">Reason for Visit</label>
+                    <input type="text" class="form-control" id="editReasonForVisit" maxlength="100" required>
+                  </div>
+                </div>
+
+                <!-- Officer Inputs Section -->
+                <h6 class="section-divider">Officer Inputs</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="modal-label">Status</label>
+                    <select class="form-select" id="editStatus" required onchange="toggleEscalationFields()">
+                      <option>Pending</option>
+                      <option>Served</option>
+                      <option>Escalated</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="modal-label">Officer Remarks</label>
+                    <textarea class="form-control" id="editOfficerRemarks" rows="2" maxlength="500"></textarea>
+                  </div>
+                </div>
+
+                <!-- Escalation Section -->
+                <div id="escalationSection" class="d-none">
+                  <h6 class="section-divider">Escalation Details</h6>
+                  <div class="escalation-info">
+                    <p><strong>Current Assignment:</strong></p>
+                    <p>Department: <span id="currentDepartment"></span></p>
+                    <p>Person to See: <span id="currentPersonToSee"></span></p>
+                    <p>Reason: <span id="currentReason"></span></p>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="modal-label">Escalated To Department</label>
+                      <select class="form-select" id="editEscalatedDepartment" required>
+                        <option value="">Select Department</option>
+                        <option>ICT</option>
+                        <option>Registration</option>
+                        <option>Field Services Coordination</option>
+                        <option>Compliance</option>
+                        <option>Political Parties Capacity Building</option>
+                        <option>Finance & Political Parties Fund</option>
+                        <option>Accounting Services</option>
+                        <option>Planning & Research</option>
+                        <option>Partnerships & Resource Mobilization</option>
+                        <option>Human Resource Management</option>
+                        <option>Administration</option>
+                        <option>Records Management</option>
+                        <option>Corporate Communications</option>
+                        <option>Legal & Advisory Services</option>
+                        <option>Supply Chain Management</option>
+                        <option>Internal Audit & Assurance</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="modal-label">Escalated To Person</label>
+                      <input type="text" class="form-control" id="editEscalatedPerson" maxlength="50" required placeholder="Enter officer name">
+                    </div>
+                    <div class="col-12">
+                      <label class="modal-label">Escalation Reason</label>
+                      <textarea class="form-control" id="editEscalationReason" rows="2" maxlength="500" required placeholder="Explain why this is being escalated"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Customer Feedback Section - Simplified to Single Rating -->
+                <h6 class="section-divider">Customer Feedback</h6>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="modal-label">On a scale of 1-5; how do you rate our services? (with 1 being the lowest and 5 being the highest)</label>
+                    <select class="form-select" id="editServiceRating" onchange="updateRatingDisplay()">
+                      <option value="">Select Rating</option>
+                      <option value="1">1 - Poor</option>
+                      <option value="2">2 - Fair</option>
+                      <option value="3">3 - Fair</option>
+                      <option value="4">4 - Good</option>
+                      <option value="5">5 - Excellent</option>
+                    </select>
+                    <div id="ratingDisplay" class="mt-2 p-2 bg-light rounded">
+                      <small><strong>Rating Scale:</strong> 1-Poor, 2&3-Fair, 4-Good, 5-Excellent</small>
+                      <div id="selectedRating" class="mt-1"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Audit History -->
+                <h6 class="section-divider mt-4"><a data-bs-toggle="collapse" href="#auditHistory">Audit History</a></h6>
+                <div class="collapse audit-history" id="auditHistory">
+                  <div id="auditEntries"></div>
+                </div>
+              </form>
+              <div id="modalLoading" class="text-center d-none"><div class="spinner-border"></div></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" id="deleteEntry">Delete</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" id="saveEdit" disabled>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQXkCkRrlb8uXuOlfvliabCmoocF18zHw",
+      authDomain: "orpp-customer-service.firebaseapp.com",
+      projectId: "orpp-customer-service",
+      storageBucket: "orpp-customer-service.firebasestorage.app",
+      messagingSenderId: "945235769891",
+      appId: "1:945235769891:web:60a0c68884f88a4c154f96"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+    // Mask sensitive data for reports
+    function maskIdNumber(idNo) {
+      if (!idNo || idNo.length < 5) return idNo;
+      const firstTwo = idNo.substring(0, 2);
+      const lastTwo = idNo.substring(idNo.length - 2);
+      const maskedLength = idNo.length - 4;
+      return firstTwo + 'X'.repeat(maskedLength) + lastTwo;
+    }
+
+    function maskPhoneNumber(phone) {
+      if (!phone || phone.length < 7) return phone;
+      const firstTwo = phone.substring(0, 2);
+      const lastTwo = phone.substring(phone.length - 2);
+      const maskedLength = phone.length - 4;
+      return firstTwo + 'X'.repeat(maskedLength) + lastTwo;
+    }
+
+    // Rating mapping function
+    function getRatingCategory(rating) {
+      if (!rating) return {text: 'Not Rated', class: ''};
+      const numRating = parseInt(rating);
+      if (numRating === 1) return {text: 'Poor', class: 'rating-poor'};
+      if (numRating === 2 || numRating === 3) return {text: 'Fair', class: 'rating-fair'};
+      if (numRating === 4) return {text: 'Good', class: 'rating-good'};
+      if (numRating === 5) return {text: 'Excellent', class: 'rating-excellent'};
+      return {text: 'Not Rated', class: ''};
+    }
+
+    // Update rating display
+    function updateRatingDisplay() {
+      const select = document.getElementById('editServiceRating');
+      const display = document.getElementById('selectedRating');
+      const rating = select.value;
+      const category = getRatingCategory(rating);
+      
+      display.innerHTML = rating ? 
+        `<span class="${category.class}"><strong>Selected Rating: ${rating} - ${category.text}</strong></span>` : 
+        '<span class="text-muted">No rating selected</span>';
+    }
+
+    // Toggle escalation fields
+    function toggleEscalationFields() {
+      const status = document.getElementById('editStatus').value;
+      const escalationSection = document.getElementById('escalationSection');
+      
+      if (status === 'Escalated') {
+        escalationSection.classList.remove('d-none');
+        // Show current assignment details
+        document.getElementById('currentDepartment').textContent = document.getElementById('editDepartment').value;
+        document.getElementById('currentPersonToSee').textContent = document.getElementById('editPersonToSee').textContent;
+        document.getElementById('currentReason').textContent = document.getElementById('editReasonForVisit').value;
+        
+        // Make escalation fields required
+        document.getElementById('editEscalatedDepartment').required = true;
+        document.getElementById('editEscalatedPerson').required = true;
+        document.getElementById('editEscalationReason').required = true;
+      } else {
+        escalationSection.classList.add('d-none');
+        // Remove required from escalation fields
+        document.getElementById('editEscalatedDepartment').required = false;
+        document.getElementById('editEscalatedPerson').required = false;
+        document.getElementById('editEscalationReason').required = false;
+      }
+    }
+
+    // Toggle analytics section
+    document.getElementById('analyticsBtn').onclick = function() {
+      const analyticsSection = document.getElementById('analyticsSection');
+      const isVisible = analyticsSection.style.display !== 'none';
+      analyticsSection.style.display = isVisible ? 'none' : 'block';
+      this.textContent = isVisible ? 'Show Analytics' : 'Hide Analytics';
+    };
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('authSection').classList.add('d-none');
+        document.getElementById('dashboard').classList.remove('d-none');
+        document.getElementById('adminProfile').classList.remove('d-none');
+        document.getElementById('adminEmail').textContent = user.email;
+        loadDashboard();
+        loadEntries();
+      } else {
+        document.getElementById('authSection').classList.remove('d-none');
+        document.getElementById('dashboard').classList.add('d-none');
+        document.getElementById('adminProfile').classList.add('d-none');
+      }
+    });
+
+    document.getElementById('loginForm').onsubmit = async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try { await auth.signInWithEmailAndPassword(email, password); }
+      catch (err) { alert('Login failed: ' + err.message); }
+    };
+
+    document.getElementById('logoutBtn').onclick = () => auth.signOut();
+
+    async function loadDashboard() {
+      const snap = await db.collection('customerEntries').get();
+      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const total = entries.length;
+      const pending = entries.filter(e => e.status === 'Pending').length;
+      const today = new Date().toISOString().split('T')[0];
+      const servedToday = entries.filter(e => e.date === today && e.status === 'Served').length;
+
+      const waitTimes = entries.filter(e => e.timeOut).map(e => {
+        const [h1, m1] = e.timeIn.split(':').map(Number);
+        const [h2, m2] = e.timeOut.split(':').map(Number);
+        return (h2 * 60 + m2) - (h1 * 60 + m1);
+      });
+      const avgWait = waitTimes.length ? Math.round(waitTimes.reduce((a,b)=>a+b,0)/waitTimes.length) : 0;
+
+      // Calculate ratings based on single service rating
+      const rated = entries.filter(e => e.serviceRating && !isNaN(e.serviceRating));
+      const excellentRating = rated.length ? Math.round(entries.filter(e => parseInt(e.serviceRating) === 5).length / rated.length * 100) : 0;
+
+      document.getElementById('kpiTotal').textContent = total;
+      document.getElementById('kpiPending').textContent = pending;
+      document.getElementById('kpiServedToday').textContent = servedToday;
+      document.getElementById('kpiAvgWait').textContent = `${avgWait} min`;
+      document.getElementById('kpiExcellent').textContent = `${excellentRating}%`;
+
+      const daily = entries.reduce((a, e) => { 
+        const date = e.date || e.visitDate;
+        if (date) a[date] = (a[date]||0)+1; 
+        return a; 
+      }, {});
+      const labels = Object.keys(daily).sort();
+      new Chart(document.getElementById('dailyTrendChart'), {
+        type: 'line', data: { labels, datasets: [{ label: 'Customers', data: labels.map(d=>daily[d]), borderColor: '#1A56DB', fill: true }] },
+        options: { responsive: true }
+      });
+
+      const locs = entries.reduce((a, e) => { 
+        const key = e.hqRegion === 'HQ' ? `HQ - ${e.floor}` : e.hqRegion; 
+        a[key] = (a[key]||0)+1; 
+        return a; 
+      }, {});
+      new Chart(document.getElementById('locationChart'), {
+        type: 'doughnut', data: { labels: Object.keys(locs), datasets: [{ data: Object.values(locs), backgroundColor: ['#1A56DB','#4CAF50','#FF9800','#F44336'] }] },
+        options: { responsive: true }
+      });
+
+      const reasons = entries.reduce((a, e) => { a[e.reasonForVisit] = (a[e.reasonForVisit]||0)+1; return a; }, {});
+      const top = Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      document.getElementById('reasonsTable').innerHTML = top.map(([r,c]) => `<tr><td>${r}</td><td>${c}</td></tr>`).join('');
+    }
+
+    async function loadEntries() {
+      document.getElementById('loading').classList.remove('d-none');
+      let q = db.collection('customerEntries').orderBy('createdAt', 'desc').limit(100);
+      const filter = document.getElementById('filter').value;
+      const search = document.getElementById('search').value.toLowerCase();
+      if (filter === 'Today') {
+        const today = new Date().toISOString().split('T')[0];
+        q = q.where('date', '==', today);
+      }
+      if (filter === 'Pending') q = q.where('status', '==', 'Pending');
+      
+      const snap = await q.get();
+      const tbody = document.getElementById('entriesTable');
+      tbody.innerHTML = '';
+      let i = 1;
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        if (search && !`${d.ticketNumber} ${d.name} ${d.idNo}`.toLowerCase().includes(search)) return;
+        const loc = d.hqRegion === 'HQ' ? `HQ - ${d.floor}` : d.hqRegion;
+        // Use date field instead of visitDate
+        const displayDate = d.date || d.visitDate || '—';
+        const row = `<tr>
+          <td>${i++}</td>
+          <td>#${String(d.ticketNumber).padStart(2,'0')}</td>
+          <td>${displayDate}</td>
+          <td>${d.timeIn}</td>
+          <td>${d.timeOut || '—'}</td>
+          <td>${d.name}</td>
+          <td>${loc}</td>
+          <td>${d.department}</td>
+          <td>${d.personToSee || '—'}</td>
+          <td>${d.reasonForVisit}</td>
+          <td><span class="badge ${d.status==='Pending'?'status-pending':d.status==='Served'?'status-served':'status-escalated'}">${d.status}</span></td>
+          <td><button class="btn btn-sm btn-info view-btn" data-id="${doc.id}">View/Edit</button></td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+      document.querySelectorAll('.view-btn').forEach(b => b.onclick = () => openModal(b.dataset.id));
+      document.getElementById('loading').classList.add('d-none');
+    }
+
+    document.getElementById('search').oninput = () => debounce(loadEntries, 300);
+    document.getElementById('filter').onchange = loadEntries;
+
+    async function openModal(id) {
+      document.getElementById('modalLoading').classList.remove('d-none');
+      const doc = await db.collection('customerEntries').doc(id).get();
+      const d = doc.data();
+      document.getElementById('editId').value = id;
+      document.getElementById('editTicketNo').textContent = `#${String(d.ticketNumber).padStart(2,'0')}`;
+      document.getElementById('editName').textContent = d.name;
+      document.getElementById('editIdNo').textContent = d.idNo;
+      document.getElementById('editPhoneNumber').textContent = d.phoneNumber;
+      document.getElementById('editLocation').textContent = d.hqRegion === 'HQ' ? `HQ - ${d.floor}` : d.hqRegion;
+      document.getElementById('editPersonToSee').textContent = d.personToSee || '—';
+      document.getElementById('editDepartment').value = d.department;
+      document.getElementById('editReasonForVisit').value = d.reasonForVisit;
+      // Use date field and make it read-only
+      document.getElementById('editVisitDate').textContent = d.date || d.visitDate || '—';
+      document.getElementById('editTimeIn').textContent = d.timeIn;
+      document.getElementById('editTimeOut').value = d.timeOut || '';
+      document.getElementById('editOfficerRemarks').value = d.officerRemarks || '';
+      document.getElementById('editStatus').value = d.status;
+      
+      // Set escalation fields if they exist
+      document.getElementById('editEscalatedDepartment').value = d.escalatedDepartment || '';
+      document.getElementById('editEscalatedPerson').value = d.escalatedPerson || '';
+      document.getElementById('editEscalationReason').value = d.escalationReason || '';
+      
+      // Set single service rating value and update display
+      document.getElementById('editServiceRating').value = d.serviceRating || '';
+      updateRatingDisplay();
+
+      // Toggle escalation fields based on current status
+      toggleEscalationFields();
+
+      const audit = document.getElementById('auditEntries');
+      audit.innerHTML = d.auditHistory?.map(a => `<div class="audit-entry"><strong>${a.changedBy}</strong> @ ${new Date(a.changedAt.toDate()).toLocaleString()}: ${Object.entries(a.changes).map(([k,v])=>`${k}=${v}`).join(', ')}</div>`).join('') || '<p>No audit history</p>';
+
+      document.getElementById('saveEdit').disabled = false;
+      document.getElementById('modalLoading').classList.add('d-none');
+      modal.show();
+    }
+
+    document.getElementById('saveEdit').onclick = async () => {
+      // Validate escalation fields if status is Escalated
+      const status = document.getElementById('editStatus').value;
+      if (status === 'Escalated') {
+        const escalatedDept = document.getElementById('editEscalatedDepartment').value;
+        const escalatedPerson = document.getElementById('editEscalatedPerson').value;
+        const escalationReason = document.getElementById('editEscalationReason').value;
+        
+        if (!escalatedDept || !escalatedPerson || !escalationReason) {
+          alert('Please fill all escalation details: Department, Person, and Reason for escalation.');
+          return;
+        }
+      }
+
+      if (!confirm('Save changes?')) return;
+      const id = document.getElementById('editId').value;
+      const timeIn = document.getElementById('editTimeIn').textContent;
+      const timeOut = document.getElementById('editTimeOut').value;
+
+      const updates = {
+        department: document.getElementById('editDepartment').value,
+        reasonForVisit: document.getElementById('editReasonForVisit').value,
+        timeOut,
+        officerRemarks: document.getElementById('editOfficerRemarks').value,
+        status: document.getElementById('editStatus').value,
+        serviceRating: document.getElementById('editServiceRating').value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      // Add escalation details if status is Escalated
+      if (status === 'Escalated') {
+        updates.escalatedDepartment = document.getElementById('editEscalatedDepartment').value;
+        updates.escalatedPerson = document.getElementById('editEscalatedPerson').value;
+        updates.escalationReason = document.getElementById('editEscalationReason').value;
+      }
+
+      if (timeOut) {
+        const [h1,m1] = timeIn.split(':').map(Number);
+        const [h2,m2] = timeOut.split(':').map(Number);
+        updates.serviceTimeMinutes = (h2*60 + m2) - (h1*60 + m1);
+      }
+
+      const auditEntry = {
+        changedBy: auth.currentUser.email,
+        changedAt: new Date(),
+        changes: updates
+      };
+
+      try {
+        const docRef = db.collection('customerEntries').doc(id);
+        await docRef.update(updates);
+        await docRef.update({
+          auditHistory: firebase.firestore.FieldValue.arrayUnion(auditEntry)
+        });
+        alert('Changes saved successfully!');
+        modal.hide();
+        loadEntries();
+        loadDashboard();
+      } catch (err) {
+        console.error(err);
+        alert('Error saving changes: ' + err.message);
+      }
+    };
+
+    document.getElementById('deleteEntry').onclick = async () => {
+      if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) return;
+      const id = document.getElementById('editId').value;
+      try {
+        await db.collection('customerEntries').doc(id).delete();
+        alert('Entry deleted successfully!');
+        modal.hide();
+        loadEntries();
+        loadDashboard();
+      } catch (err) { alert('Error deleting entry: ' + err.message); }
+    };
+
+    document.getElementById('generateReportBtn').onclick = async () => {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const format = document.getElementById('reportFormat').value;
+      if (!start || !end || start > end) return alert('Invalid dates');
+
+      const snap = await db.collection('customerEntries')
+        .where('date', '>=', start)
+        .where('date', '<=', end)
+        .get();
+      const entries = snap.docs.map(d => d.data());
+
+      if (format === 'csv') {
+        const csv = [
+          'Ticket No.,Date,Time In,Time Out,Name,ID No,Phone,Location,Department,Person to See,Reason,Status,Officer Remarks,Service Rating',
+          ...entries.map(e => [
+            e.ticketNumber, 
+            e.date || e.visitDate, 
+            e.timeIn, 
+            e.timeOut || '', 
+            e.name, 
+            maskIdNumber(e.idNo), // Masked ID
+            maskPhoneNumber(e.phoneNumber), // Masked Phone
+            e.hqRegion === 'HQ' ? `HQ - ${e.floor}` : e.hqRegion,
+            e.department, 
+            e.personToSee || '', 
+            e.reasonForVisit, 
+            e.status, 
+            (e.officerRemarks || '').replace(/"/g, '""'),
+            e.serviceRating ? getRatingCategory(e.serviceRating).text : 'Not Rated'
+          ].map(f => `"${f}"`).join(','))
+        ].join('\n');
+        download(csv, `ORPP_Report_${start}_to_${end}.csv`, 'text/csv');
+      } else if (format === 'pdf') {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(16); 
+        doc.text('ORPP Customer Service Report', 14, 20);
+        doc.setFontSize(10); 
+        doc.text(`Period: ${start} to ${end}`, 14, 30);
+        doc.setFontSize(8);
+        doc.text('*ID and Phone numbers are masked for security', 14, 37);
+        
+        doc.autoTable({
+          head: [['Ticket', 'Date', 'Time In', 'Time Out', 'Name', 'ID No', 'Phone', 'Location', 'Department', 'Reason', 'Status', 'Service Rating']],
+          body: entries.map(e => [
+            `#${String(e.ticketNumber).padStart(2,'0')}`, 
+            e.date || e.visitDate, 
+            e.timeIn, 
+            e.timeOut || '—', 
+            e.name,
+            maskIdNumber(e.idNo), // Masked ID
+            maskPhoneNumber(e.phoneNumber), // Masked Phone
+            e.hqRegion === 'HQ' ? `HQ - ${e.floor}` : e.hqRegion, 
+            e.department, 
+            e.reasonForVisit, 
+            e.status,
+            e.serviceRating ? getRatingCategory(e.serviceRating).text : '—'
+          ]),
+          startY: 45,
+          styles: { fontSize: 7 },
+          headStyles: { fontSize: 7 }
+        });
+        doc.save(`ORPP_Report_${start}_to_${end}.pdf`);
+      }
+      document.getElementById('reportOutput').textContent = 'Report downloaded successfully!';
+      setTimeout(() => document.getElementById('reportOutput').textContent = '', 3000);
+    };
+
+    function download(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function debounce(fn, wait) {
+      let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    }
+  </script>
+</body>
+</html>

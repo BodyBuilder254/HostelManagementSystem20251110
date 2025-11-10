@@ -1,0 +1,56 @@
+
+.container{
+    display: flex;
+    flex-direction: column;
+}
+
+.myForm{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+}
+.myForm input{
+    font-size: 20px;
+    color: black;
+    border: 2px solid black;
+    padding: 10px;
+}
+.myForm div{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 2rem;
+}
+.myForm button{
+    font-size: 2rem;
+    color: #fff;
+    background-color: blue;
+    padding: 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition:  0.5s ease;
+}
+.myForm button:hover{
+    opacity: 0.5;
+}
+
+.myTable{
+
+}
+.myTable th{
+    font-size: 20px;
+}
+.myTable td{
+    font-size: 20px;
+    color: black;
+}
+.myTable button{
+    font-size: 2rem;
+    color: #fff;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: red;
+}
