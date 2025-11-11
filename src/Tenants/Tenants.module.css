@@ -2,6 +2,7 @@
 .container{
     display: flex;
     flex-direction: column;
+    gap: 40PX;
 }
 
 .myForm{
@@ -36,6 +37,28 @@
     opacity: 0.5;
 }
 
+.searchBar{
+    display: flex;
+    gap: 10px;
+    /* margin: 20px 2px; */
+}
+.searchBar input{
+    font-size: 20px;
+    padding: 10px;
+    color: black;
+    border: 1px solid black;
+}
+
+.exportControls{
+  display: flex; 
+  gap: 10PX;
+  /* margin: 20PX 2PX; */
+  /* flex-direction: column;  */
+}
+.exportControls button{
+    background-color: green;
+}
+
 .myTable{
 
 }
@@ -46,11 +69,21 @@
     font-size: 20px;
     color: black;
 }
-.myTable button{
+.myTable button, .searchBar button, .exportControls button{
     font-size: 2rem;
     color: #fff;
     padding: 10px;
     border: none;
-    border-radius: 5px;
+    border-radius: 5px;   
+    transition: 0.5s ease;
+}
+.deleteButton{
     background-color: red;
+}
+.editButton{
+    background-color: blueviolet;
+    padding: 10px 20px;
+}
+.deleteButton:hover, .editButton:hover, .exportControls button:hover{
+    opacity: 0.5;
 }

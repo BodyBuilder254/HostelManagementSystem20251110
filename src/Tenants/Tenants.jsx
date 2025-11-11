@@ -2,11 +2,14 @@
 import React, {useState, useEffect} from "react";
 import styles from "./Tenants.module.css";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable"; "jspdf-autotable";
+
 function Tenants(){
 
     const [idNumber, setIDNumber] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
-    const [fisrtName, setFirstName] = useState("");
+    const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [entryDate, setEntryDate] = useState("");
     const [roomNumber, setRoomNumber] = useState("");
@@ -23,6 +26,10 @@ function Tenants(){
         localStorage.setItem("20251110MYTenants", JSON.stringify(myTenants));
         console.log(myTenants);
     }, [myTenants]);
+
+    useEffect(()=>{
+        document.title = "Tenants";
+    }, []);
 
     function handleIDNumber(event){
         setIDNumber(event.target.value);
@@ -42,11 +49,22 @@ function Tenants(){
     function handleRoomNumber(event){
         setRoomNumber(event.target.value);
     }
-    function handletGender(event){
+    function handleGender(event){
         setGender(event.target.value);
     }
     function handleMonthlyCharges(event){
         setMonthlyCharges(event.target.value);
+    }
+
+    function resetFormFields(){
+        setIDNumber("");
+        setPhoneNumber("");
+        setFirstName("");
+        setLastName("");
+        setEntryDate("");
+        setRoomNumber("");
+        setGender("");
+        setMonthlyCharges("");
     }
 
     function handleAddCustomer(event){
@@ -57,7 +75,7 @@ function Tenants(){
         else if(!(phoneNumber.startsWith(254)) || phoneNumber.length !== 12){
             window.alert("Phone must start with '254' ");
         }
-        else if(fisrtName.length < 3 || lastName.length < 3){
+        else if(firstName.length < 3 || lastName.length < 3){
             window.alert("Enter valid name");
         }
         else if(Number(monthlyCharges) < 6000){
@@ -65,8 +83,8 @@ function Tenants(){
         }
         else{
             const newCustomer = {
-                idNumber: idNumber, phoneNumber: phoneNumber ,fisrtName: fisrtName, lastName: lastName,
-                entryDate: entryDate, roomNumber: roomNumber, gender: gender, monthlyCharges: monthlyCharges
+                IDNumber: idNumber, PhoneNumber: phoneNumber ,FirstName: firstName, LastName: lastName,
+                EntryDate: entryDate, RoomNumber: roomNumber, Gender: gender, MonthlyCharges: monthlyCharges
             }
 
             if(editIndex !== null){
@@ -75,12 +93,13 @@ function Tenants(){
                 setMyTenants(updatedTenants);
                 setEditIndex(null);
                 window.alert("Tenant details updated successfully!");
+                resetFormFields();
             }
 
             else{
 
                 const isDuplicate = myTenants.some((tenant) => 
-                    tenant.idNumber === idNumber || tenant.phoneNumber === phoneNumber
+                    tenant.IDNumber === idNumber || tenant.PhoneNumber === phoneNumber
                 );
 
                 if(isDuplicate){
@@ -89,6 +108,7 @@ function Tenants(){
                 else{
                     setMyTenants(t => [...t, newCustomer]);
                     window.alert("Tenant added successfully!")
+                    resetFormFields();
                 }
             }
             
@@ -99,14 +119,14 @@ function Tenants(){
     function handleEditTenant(index){
         const tenantToEdit = myTenants[index];
 
-        setIDNumber(tenantToEdit.idNumber);
-        setPhoneNumber(tenantToEdit.phoneNumber);
-        setFirstName(tenantToEdit.fisrtName);
-        setLastName(tenantToEdit.lastName);
-        setEntryDate(tenantToEdit.entryDate);
-        setRoomNumber(tenantToEdit.roomNumber);
-        setGender(tenantToEdit.gender);
-        setMonthlyCharges(tenantToEdit.monthlyCharges);
+        setIDNumber(tenantToEdit.IDNumber);
+        setPhoneNumber(tenantToEdit.PhoneNumber);
+        setFirstName(tenantToEdit.FirstName);
+        setLastName(tenantToEdit.LastName);
+        setEntryDate(tenantToEdit.EntryDate);
+        setRoomNumber(tenantToEdit.RoomNumber);
+        setGender(tenantToEdit.Gender);
+        setMonthlyCharges(tenantToEdit.MonthlyCharges);
 
         setEditIndex(index);
 
@@ -126,25 +146,122 @@ function Tenants(){
         
     }
 
+    function handleSearchTerm(event){
+        setSearchTerm(event.target.value);
+    }
+    function handleSearch(){
+        if(searchTerm.length < 8 || searchTerm.length > 12){
+            window.alert("Enter valid Phone or ID Number");
+        }
+        else{
+        const foundTenant = myTenants.find((tenant)=> 
+            tenant.IDNumber === searchTerm || tenant.PhoneNumber === searchTerm);
+        if(foundTenant){
+            setSearchResult(foundTenant);
+        }
+        else{
+            window.alert("No tenant found with that ID or phone number");
+            setSearchResult(null);
+        }}
+
+    }
+    function handleReset(){
+        setSearchTerm("");
+        setSearchResult(null);
+    }
+
+    function handleExportCSV(){
+        
+        if(!myTenants || myTenants.length === 0){
+            window.alert("No tenant data available to export.");
+        }
+        else{
+            // Extract Headers Dynamically
+            const headers = Object.keys(myTenants[0]);
+            const csvRows = [];
+
+            // Add Headers
+            csvRows.push(headers.join(","));
+
+            // Add Each Tenant's Data Row
+            myTenants.forEach((tenant) => {
+                const values = headers.map((header) => {
+                    // Escape Commas and Quotes Properly
+                    const escaped = String(tenant[header]).replace(/"/g,'""');
+                    return `"${escaped}"`
+                });
+                csvRows.push(values.join(","));
+            });
+
+            // Create CSV String
+            const csvString = csvRows.join("\n");
+
+            // Create Downloadable blob
+            const blob = new Blob([csvString], {type: "text/csv"});
+            const url = URL.createObjectURL(blob);
+
+            // Create Download Link
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "tenants_data.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        }
+    }
+
+    function handleExportPDF(){
+        if(!myTenants || myTenants.length === 0){
+            window.alert("No tenant data to export");
+        }
+        else{
+            const pdf = new jsPDF();
+            pdf.setFontSize(16);
+            pdf.setFont("helvetica", "bold");
+            pdf.text("TENANT RECORDS", 14, 10);
+            autoTable(pdf, {
+                startY: 20, 
+                head: [Object.keys(myTenants[0])],
+                body: myTenants.map((tenant)=> Object.values(tenant))
+            });
+            pdf.save("tenants_data.pdf");
+        }
+    }
+
     return(
         <div className={styles.container} >
+            <h1>Hostel Management System</h1>
             <form className={styles.myForm} onSubmit={handleAddCustomer} >
                 <input type="number" placeholder="ID Number" value={idNumber} onChange={handleIDNumber} required/><br/>
                 <input type="number" placeholder="Phone Number" value={phoneNumber} onChange={handlePhoneNumber} required/><br/>
-                <input type="text" placeholder="First Name" value={fisrtName} onChange={handleFirstName} required/><br/>
+                <input type="text" placeholder="First Name" value={firstName} onChange={handleFirstName} required/><br/>
                 <input type="text" placeholder="Last Name" value={lastName} onChange={handleLastName} required /><br />
                 <input type="date" value={entryDate} onChange={handleEntryDate} required /><br/>
                 <input type="text" placeholder="Room Number" value={roomNumber} onChange={handleRoomNumber} required /><br />
                 <div>
-                    <input value="Male" type="radio" name="gender" checked={gender === "Male"} onChange={handletGender} required />
+                    <input value="Male" type="radio" name="gender" checked={gender === "Male"} onChange={handleGender} required />
                     <label>Male</label>
-                    <input value="Female" type="radio" name="gender" checked={gender === "Female"} onChange={handletGender} required />
+                    <input value="Female" type="radio" name="gender" checked={gender === "Female"} onChange={handleGender} required />
                     <label>Female</label> <br />
                 </div>
                 <input type="number" placeholder="Monthly Charges" value={monthlyCharges} onChange={handleMonthlyCharges} required /><br />
                 <button type="submit" >Add Customer</button>
 
             </form>
+
+            <div className={styles.searchBar} >
+                <input type="number" value={searchTerm} onChange={handleSearchTerm} placeholder="Enter ID or Phone Number" />
+                <button className={styles.editButton} onClick={handleSearch} >Search</button>
+                <button className={styles.deleteButton} onClick={handleReset} >Reset</button>
+            </div>
+
+            <div className={styles.exportControls} >
+                <button onClick={handleExportCSV} >Export CSV</button>
+                <button onClick={handleExportPDF} >Export PDF</button>
+                <button>Export WORD</button>
+            </div>
+
             <table className={styles.myTable} >
                 <thead>
                     <tr>
@@ -162,19 +279,20 @@ function Tenants(){
                 </thead>
 
                 <tbody>
-                    {myTenants.map((tenant, index) => 
-                    <tr key={index}>
-                        <td>{tenant.idNumber} </td>
-                        <td>{tenant.phoneNumber} </td>
-                        <td>{tenant.fisrtName} </td>
-                        <td>{tenant.lastName} </td>
-                        <td>{tenant.entryDate} </td>
-                        <td>{tenant.roomNumber} </td>
-                        <td>{tenant.gender} </td>
-                        <td>{tenant.monthlyCharges} </td>
-                        <td><button onClick={()=> handleEditTenant(index)} >Edit</button> </td>
-                        <td><button onClick={()=>deleteCustomer(index)} >Delete</button></td>
-                    </tr>
+                    {(searchResult ? [searchResult] : myTenants)?.map((tenant, index) =>{ 
+                        const tenantIndex = myTenants.findIndex((t) => t.IDNumber === tenant.IDNumber );
+                  return(  <tr key={index}>
+                        <td>{tenant.IDNumber} </td>
+                        <td>{tenant.PhoneNumber} </td>
+                        <td>{tenant.FirstName} </td>
+                        <td>{tenant.LastName} </td>
+                        <td>{tenant.EntryDate} </td>
+                        <td>{tenant.RoomNumber} </td>
+                        <td>{tenant.Gender} </td>
+                        <td>{tenant.MonthlyCharges} </td>
+                        <td><button onClick={()=> handleEditTenant(tenantIndex)} className={styles.editButton} >Edit</button> </td>
+                        <td><button onClick={()=>deleteCustomer(tenantIndex)} className={styles.deleteButton} >Delete</button></td>
+                    </tr>)}
                     )}
                 </tbody>
 
