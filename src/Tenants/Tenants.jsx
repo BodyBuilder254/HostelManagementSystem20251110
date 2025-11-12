@@ -259,7 +259,6 @@ function Tenants(){
             <div className={styles.exportControls} >
                 <button onClick={handleExportCSV} >Export CSV</button>
                 <button onClick={handleExportPDF} >Export PDF</button>
-                <button>Export WORD</button>
             </div>
 
             <table className={styles.myTable} >
