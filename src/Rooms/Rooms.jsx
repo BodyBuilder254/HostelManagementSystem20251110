@@ -2,6 +2,9 @@
 import styles from "./Rooms.module.css";
 import React, {useState, useEffect} from "react";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 function Rooms(){
 
     const [myRooms, setMyRooms] = useState(JSON.parse(localStorage.getItem("20251112MyRooms")) || []);
@@ -9,8 +12,8 @@ function Rooms(){
 
     useEffect(()=>{
         localStorage.setItem("20251112MyRooms", JSON.stringify(myRooms));
-        console.log(myRooms);
-        console.log(myTenants);
+        // console.log(myRooms);
+        // console.log(myTenants);
     }, [myRooms]);
 
     const [roomNumber, setRoomNumber] = useState("");
@@ -122,8 +125,106 @@ function Rooms(){
         setGender("");
         setMonthlyCharges("");
     }
+
+    function exportCSV(){
+        if(!myRooms || myRooms.length === 0){
+            window.alert("No Rooms data to export");
+        }
+        else{
+
+            // Define CSV Headers
+            const headers = ["Room Number", "Floor Number", "Sharing Type", "Gender", "Monthly Charges", "Vacancy"]
+            
+            // Build CSV Rows
+            const rows = myRooms.map(room => {
+                const cleanedMonthlyCharges = String(room.MonthlyCharges).replace(",", "");
+
+                const roomCapacity = room.SharingType;
+                const occupied = myTenants.filter((tenant) => tenant.RoomNumber === room.RoomNumber).length;
+                const remaining = roomCapacity - occupied;
+
+                const vacancy = remaining > 0 ? `${remaining}  Slots` : "Full";
+
+                return[
+                    room.RoomNumber,
+                    room.FloorNumber,
+                    `${room.SharingType}  Sharing`,
+                    room.Gender,
+                    `"KSH  ${room.MonthlyCharges}"`,
+                    vacancy
+                ].join(",") //Join Values with Comma
+            });
+
+            // Combine Header with Rows
+            const csvContent = [headers.join(","), ...rows].join("\n");
+
+            // Create a Blob and Download
+            const blob = new Blob([csvContent], {type: "text/csv"});
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "Rooms_Data.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        }
+    }
+    function exPortPDF(){
+        if(!myRooms || myRooms.length === 0){
+            window.alert("NO Room data to Export");
+        }
+        else{
+            const pdf = new jsPDF();
+
+            // Title
+            pdf.setFontSize(16);
+            pdf.text("ROOMS DATA EXPORT", 14, 15);
+
+            // Build the Table Data
+            const tableColumns = ["Room Number", "Floor Number", "Sharing Type", "Gender", "Monthly Charges", "Vacancy"];
+            const tableRows = [];
+
+            myRooms.forEach((room, index)=>{
+
+                const roomCapacity = Number(room.SharingType);
+
+                const occupied = myTenants.filter((tenant)=> tenant.RoomNumber === room.RoomNumber).length;
+                const remaining = roomCapacity - occupied;
+                const vacancy = remaining > 0 ? `${remaining}  Slots` : "Full";
+
+                tableRows.push([
+                    room.RoomNumber,
+                    room.FloorNumber,
+                    `${room.SharingType}  Sharing`,
+                    room.Gender,
+                    `KSH ${room.MonthlyCharges}`,
+                    vacancy
+                ]);
+            });
+
+            // Add the Table to the PDF
+            autoTable(pdf, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 25,
+                styles: {
+                    fontSize: 14,
+                    align: "center"
+                }, 
+                headStyles: {
+                    filColor: [100, 149, 237],
+                    textColor: [255, 255, 255]
+                }
+            });
+
+            // Save the PDF
+            pdf.save("Rooms_Data.pdf");
+
+        }
+    }
     return(
         <div className={styles.myContainer} >
+            <h1>New Rooms Addition</h1>
             <form className={styles.myForm} onSubmit={handleAddRoom} >
                 <input type="text" placeholder="Enter Room Number" value={roomNumber} onChange={handleRoomNumber} required/>
                 <select required value={floorNumber} onChange={handleFloorNumber}>
@@ -133,10 +234,12 @@ function Rooms(){
                 </select>
                 <select required value={sharingType} onChange={handleSharingType}>
                     <option value="" >Type of Sharing</option>
+                    <option value="1" >1</option>
                     <option value="2" >2</option>
                     <option value="4" >4</option>
                     <option value="6" >6</option>
                     <option value="8" >8</option>
+                    <option value="10" >10</option>
                 </select>
                 <div>
                     <input value="Male" type="radio" name="gender" onChange={handleGender} checked={gender === "Male"} required />
@@ -146,12 +249,16 @@ function Rooms(){
                 </div>
                 <select required value={monthlyCharges} onChange={handleMonthlyCharges} >
                     <option value="" >Monthly Charges</option>
+                    <option value="15,000" >15,000</option>
+                    <option value="10,000" >10,000</option>
                     <option value="9,500" >9,500</option>
                     <option value= "9,000" >9,000</option>
                     <option value= "8,500" >8,500</option>
                     <option value= "8,000" >8,000</option>
                     <option value= "7,500" >7,500</option>
                     <option value= "7,000" >7,000</option>
+                    <option value= "6,500" >6,500</option>
+                    <option value= "6,000" >6,000</option>
                 </select>
                 <button type="submit">Add Room</button>
             </form>
@@ -161,7 +268,10 @@ function Rooms(){
                 <button className={styles.searchButton} onClick={handleSearch} >Search</button>
                 <button className={styles.resetButton} onClick={handleReset} >Reset</button>
             </div>
-
+            <div className={styles.myExport} >
+                <button className={styles.searchButton} onClick={exportCSV} >Export CSV</button>
+                <button className={styles.resetButton} onClick={exPortPDF} >Export PDF</button>
+            </div>
             <table className={styles.myTable}>
                 <thead>
                     <tr>

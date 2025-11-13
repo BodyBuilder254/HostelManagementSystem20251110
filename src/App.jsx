@@ -1,5 +1,5 @@
 
-// import Tenants from "./Tenants/Tenants.jsx";
+import Tenants from "./Tenants/Tenants.jsx";
 import Rooms from "./Rooms/Rooms.jsx";
 
 function App(){

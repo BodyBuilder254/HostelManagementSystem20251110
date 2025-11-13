@@ -3,7 +3,7 @@ import React, {useState, useEffect} from "react";
 import styles from "./Tenants.module.css";
 
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable"; "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 function Tenants(){
 
@@ -22,6 +22,7 @@ function Tenants(){
 
 
     const [myTenants, setMyTenants] = useState(JSON.parse(localStorage.getItem("20251110MYTenants")) || []);
+    const [myRooms, setMyRooms] = useState(JSON.parse(localStorage.getItem("20251112MyRooms")) || []);
     useEffect(()=>{
         localStorage.setItem("20251110MYTenants", JSON.stringify(myTenants));
         console.log(myTenants);
@@ -203,7 +204,7 @@ function Tenants(){
             // Create Download Link
             const link = document.createElement("a");
             link.href = url;
-            link.download = "tenants_data.csv";
+            link.download = "Tenants_Data.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -231,21 +232,37 @@ function Tenants(){
 
     return(
         <div className={styles.container} >
-            <h1>Hostel Management System</h1>
+            <h1>New Tenants Registration</h1>
+
             <form className={styles.myForm} onSubmit={handleAddCustomer} >
                 <input type="number" placeholder="ID Number" value={idNumber} onChange={handleIDNumber} required/><br/>
                 <input type="number" placeholder="Phone Number" value={phoneNumber} onChange={handlePhoneNumber} required/><br/>
                 <input type="text" placeholder="First Name" value={firstName} onChange={handleFirstName} required/><br/>
                 <input type="text" placeholder="Last Name" value={lastName} onChange={handleLastName} required /><br />
                 <input type="date" value={entryDate} onChange={handleEntryDate} required /><br/>
-                <input type="text" placeholder="Room Number" value={roomNumber} onChange={handleRoomNumber} required /><br />
+                <select value={roomNumber} onChange={handleRoomNumber} required >
+                    <option value="" >Room Number</option>
+                    {myRooms.map((room, index)=>{
+                        const roomCapacity = room.SharingType;
+                        const occupied = (myTenants.filter((tenant, index)=> tenant.RoomNumber === room.RoomNumber).length);
+                        const remaining = Number(roomCapacity) - Number(occupied);
+                        if(remaining >= 1){
+                            return(<option value={room.RoomNumber} key={index} >{`${room.RoomNumber}`} - {`${remaining} Slots Left`}</option>)
+                        }
+                    })}
+                </select>
                 <div>
                     <input value="Male" type="radio" name="gender" checked={gender === "Male"} onChange={handleGender} required />
                     <label>Male</label>
                     <input value="Female" type="radio" name="gender" checked={gender === "Female"} onChange={handleGender} required />
                     <label>Female</label> <br />
                 </div>
-                <input type="number" placeholder="Monthly Charges" value={monthlyCharges} onChange={handleMonthlyCharges} required /><br />
+                <select value={monthlyCharges} onChange={handleMonthlyCharges} required >
+                    <option value="" >Monthly Charges</option>
+                    {myRooms.map((room, index)=>{
+                        return(<option value={room.MonthlyCharges} key={index} >{room.MonthlyCharges}</option>)
+                    })}
+                </select>
                 <button type="submit" >Add Customer</button>
 
             </form>

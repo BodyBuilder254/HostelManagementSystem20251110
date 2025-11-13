@@ -26,7 +26,7 @@
     align-items: center;
     font-size: 25px;
 }
-.myForm button, .searchTab button, .myTable button{
+.myForm button, .searchTab button, .myTable button, .myExport button{
     font-size: 2rem;
     color: #fff;
     background-color: blueviolet;
@@ -45,12 +45,16 @@
     gap: 20px;
     align-items: center;
 }
-.searchTab .searchButton{
+/* .searchTab .searchButton, .myExport .searchButton{
     background-color: green;
     font-weight: bold;
-}
-.searchTab .resetButton{
+} */
+.searchTab .resetButton, .myExport .resetButton{
     background-color: red;
+}
+.myExport{
+    display: flex;
+    gap: 20px;
 }
 .myTable th{
     font-size: 25px;
@@ -70,12 +74,14 @@
     background-color: red;
     font-size: 20px;
     padding: 10px;
+    /* margin: 0 5px; */
 }
 .myTable .editButton{
     padding: 10px;
     font-size: 20px;
+    /* margin: 0 5px; */
 }
 
-.myTable .deleteButton:hover, .myTable .editButton:hover{
+.myTable .deleteButton:hover, .myTable .editButton:hover, .myExport button:hover{
     opacity: 0.5;
 }
